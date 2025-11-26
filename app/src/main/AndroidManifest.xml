@@ -25,14 +25,13 @@
 
         <activity android:name="net.openid.appauth.RedirectUriReceiverActivity"
             android:exported="true">
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="authredirect"
                     android:scheme="com.example.authtest"
                     android:path="/callback"/>
             </intent-filter>
