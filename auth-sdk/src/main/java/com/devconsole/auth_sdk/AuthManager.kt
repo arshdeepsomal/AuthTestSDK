@@ -75,7 +75,7 @@ class AuthManager(
         authApi.submitGoogleReceipt(currentPurchaseToken, previousPurchaseToken, sku, packageName)
     }
 
-    fun refreshSession(): Boolean {
+    suspend fun refreshSession(): Boolean {
         return authApi.refreshToken()
     }
 }

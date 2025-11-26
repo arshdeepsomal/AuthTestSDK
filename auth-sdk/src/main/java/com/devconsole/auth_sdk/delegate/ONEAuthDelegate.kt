@@ -8,13 +8,12 @@ import androidx.activity.result.ActivityResult
 import androidx.annotation.RequiresApi
 import com.devconsole.auth_sdk.AuthApi
 import com.devconsole.auth_sdk.auth.OneAuthClient
-import com.devconsole.auth_sdk.auth.SessionController
+import com.devconsole.auth_sdk.auth.ReceiptResultHandler
 import com.devconsole.auth_sdk.auth.TwoAuthClient
 import com.devconsole.auth_sdk.data.AuthState
 import com.devconsole.auth_sdk.data.Configuration
 import com.devconsole.auth_sdk.data.ONEAuthException
 import com.devconsole.auth_sdk.network.data.ONETokenData
-import com.devconsole.auth_sdk.network.data.SubmitReceiptData
 import com.devconsole.auth_sdk.network.data.TWOLogoutRequest
 import com.devconsole.auth_sdk.network.data.TWOTokenData
 import com.devconsole.auth_sdk.session.SessionData
@@ -24,12 +23,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import net.openid.appauth.AuthorizationException
 
 @RequiresApi(Build.VERSION_CODES.O)
 internal class ONEAuthDelegate(
     private val context: Context,
+    private val sessionManager: SessionManager,
     private val oneConfig: Configuration.ONE.Auth,
     private val twoConfig: Configuration.TWO.Auth,
 ) : AuthApi {
@@ -39,29 +38,25 @@ internal class ONEAuthDelegate(
     private val _state = MutableStateFlow<AuthState>(AuthState.UnInitialize)
     override val state: StateFlow<AuthState> = _state
 
-    private val sessionManager = SessionManager(context)
-    private val sessionController = SessionController(sessionManager)
-    override val sessionState: StateFlow<Boolean> = sessionController.sessionState
-
     private val oneAuthClient = OneAuthClient(context, oneConfig)
     private val twoAuthClient = TwoAuthClient(twoConfig)
 
+    private val receiptHandler = ReceiptResultHandler(::saveSession, ::handleError)
+    override val sessionState: StateFlow<Boolean> = sessionManager.sessionState
+
     init {
-        sessionController.setSessionState(!isSessionExpired())
+        coroutineScope.launch {
+            val isActive = if (sessionManager.hasTokenExpired()) refreshToken() else true
+            sessionManager.setSessionState(isActive)
+        }
     }
 
     override fun login() {
-        _state.value = AuthState.Loading
-        _state.value = AuthState.LaunchIntent(oneAuthClient.buildLoginIntent())
+        launchAuthIntent { oneAuthClient.buildLoginIntent() }
     }
 
     override fun register() {
-        _state.value = AuthState.Loading
-        coroutineScope.launch {
-            runCatching { buildRegisterIntent() }
-                .onSuccess { _state.value = AuthState.LaunchIntent(it) }
-                .onFailure { _state.value = AuthState.Error(it) }
-        }
+        launchAuthIntent { buildRegisterIntent() }
     }
 
     private suspend fun buildRegisterIntent(): Intent {
@@ -113,13 +108,13 @@ internal class ONEAuthDelegate(
         coroutineScope.launch {
             twoAuthClient.loginWithOneToken(oneData.accessToken.toString())
                 .onSuccess { twoData -> saveSession(twoData, oneData) }
-                .onFailure { _state.value = AuthState.Error(it) }
+                .onFailure { handleError(it) }
         }
     }
 
     override fun logout() {
         _state.value = AuthState.Loading
-        val currentSession = sessionController.currentSession()
+        val currentSession = sessionManager.getSession()
         val logoutRequest = TWOLogoutRequest(
             idToken = currentSession?.ONETokenData?.idToken,
             flatToken = currentSession?.TWOTokenData?.encodedJwt
@@ -130,19 +125,18 @@ internal class ONEAuthDelegate(
     }
 
     private fun handleLogout() {
-        sessionController.clear()
+        sessionManager.clearSession()
         _state.value = AuthState.LogoutSuccess
     }
 
-    override fun refreshToken(): Boolean {
-        val currentSession = sessionController.currentSession() ?: return false
+    override suspend fun refreshToken(): Boolean {
+        val currentSession = sessionManager.getSession() ?: return false
 
         _state.value = AuthState.Loading
-        var refreshSuccess = false
 
-        runBlocking(Dispatchers.IO) {
-            twoAuthClient.renewToken(currentSession.TWOTokenData.encodedJwt)
-                .onSuccess { newTokenData ->
+        return twoAuthClient.renewToken(currentSession.TWOTokenData.encodedJwt)
+            .fold(
+                onSuccess = { newTokenData ->
                     val updatedSession = currentSession.copy(
                         TWOTokenData = currentSession.TWOTokenData.copy(
                             encodedJwt = newTokenData.encodedJwt,
@@ -150,16 +144,16 @@ internal class ONEAuthDelegate(
                             sessionTokenExpiry = newTokenData.sessionTokenExpiry
                         )
                     )
-                    sessionController.save(updatedSession)
+                    sessionManager.saveSession(updatedSession)
                     _state.value = AuthState.AuthSuccess(updatedSession)
-                    refreshSuccess = true
-                }.onFailure {
-                    _state.value = AuthState.Error(it)
-                    sessionController.setSessionState(false)
+                    true
+                },
+                onFailure = {
+                    handleError(it)
+                    sessionManager.setSessionState(false)
+                    false
                 }
-        }
-
-        return refreshSuccess
+            )
     }
 
     override fun submitGoogleReceiptAndLinkAccount(
@@ -180,7 +174,7 @@ internal class ONEAuthDelegate(
                 password = password,
                 packageName = packageName,
                 accountToken = accountToken,
-            ).handleReceiptResponse()
+            ).let { receiptHandler.handle(it) }
         }
     }
 
@@ -198,7 +192,7 @@ internal class ONEAuthDelegate(
                 previousPurchaseToken = previousPurchaseToken,
                 sku = sku,
                 packageName = packageName,
-            ).handleReceiptResponse()
+            ).let { receiptHandler.handle(it) }
         }
     }
 
@@ -206,18 +200,8 @@ internal class ONEAuthDelegate(
         _state.value = AuthState.Loading
 
         coroutineScope.launch {
-            twoAuthClient.loginWithGoogleReceipt(purchaseToken).handleReceiptResponse()
+            twoAuthClient.loginWithGoogleReceipt(purchaseToken).let { receiptHandler.handle(it) }
         }
-    }
-
-    private suspend fun Result<SubmitReceiptData>.handleReceiptResponse() {
-        onSuccess { receiptData ->
-            if (receiptData.success == true) {
-                saveSession(receiptData.toTwoTokenData(), ONETokenData())
-            } else {
-                _state.value = AuthState.Error(Exception(receiptData.message))
-            }
-        }.onFailure { _state.value = AuthState.Error(it) }
     }
 
     private fun saveSession(twoTokenData: TWOTokenData, oneTokenData: ONETokenData) {
@@ -226,28 +210,20 @@ internal class ONEAuthDelegate(
             ONETokenData = oneTokenData,
             TWOTokenData = twoTokenData,
         )
-        sessionController.save(sessionData)
+        sessionManager.saveSession(sessionData)
         _state.value = AuthState.AuthSuccess(sessionData)
     }
 
-    private fun SubmitReceiptData.toTwoTokenData(): TWOTokenData {
-        return TWOTokenData(
-            success = success,
-            status = status,
-            sessionToken = sessionToken,
-            sessionTokenExpiry = sessionTokenExpiry,
-            supportToken = supportToken,
-            encodedJwt = encodedJwt,
-            username = username,
-            processingTime = processingTime,
-        )
+    private fun handleError(throwable: Throwable) {
+        _state.value = AuthState.Error(throwable)
     }
 
-    private fun isSessionExpired(): Boolean {
-        return if (sessionManager.hasTokenExpired()) {
-            !refreshToken()
-        } else {
-            false
+    private fun launchAuthIntent(intentBuilder: suspend () -> Intent) {
+        _state.value = AuthState.Loading
+        coroutineScope.launch {
+            runCatching { intentBuilder() }
+                .onSuccess { _state.value = AuthState.LaunchIntent(it) }
+                .onFailure { handleError(it) }
         }
     }
 }

@@ -9,7 +9,7 @@ internal interface AuthApi {
     fun register()
     fun handleIntentResult(result: ActivityResult)
     fun logout()
-    fun refreshToken(): Boolean
+    suspend fun refreshToken(): Boolean
     fun loginWithGoogleReceipt(purchaseToken: String)
     fun submitGoogleReceiptAndLinkAccount(
         purchaseToken: String,

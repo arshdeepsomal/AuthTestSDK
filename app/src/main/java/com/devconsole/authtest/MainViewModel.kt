@@ -81,7 +81,9 @@ class MainViewModel(application: Application): AndroidViewModel(application) {
     }
 
     fun refreshSession() {
-        authManager.refreshSession()
+        viewModelScope.launch {
+            authManager.refreshSession()
+        }
     }
 
     fun getCurrentSession(): SessionData? {

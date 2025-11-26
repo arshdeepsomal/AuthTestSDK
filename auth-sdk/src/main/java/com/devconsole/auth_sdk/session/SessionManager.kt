@@ -1,10 +1,15 @@
 package com.devconsole.auth_sdk.session
 
 import android.content.Context
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 internal class SessionManager(val context: Context) {
 
     private var session: Session = DefaultSessionDelegateProvider.provide()(context)
+
+    private val _sessionState = MutableStateFlow(!session.hasTokenExpired())
+    val sessionState: StateFlow<Boolean> = _sessionState
 
     fun getSession(): SessionData? {
         return session.getSession()
@@ -16,9 +21,15 @@ internal class SessionManager(val context: Context) {
 
     internal fun saveSession(sessionData: SessionData) {
         session.saveSession(sessionData)
+        setSessionState(true)
     }
 
     internal fun clearSession() {
         session.clearSession()
+        setSessionState(false)
+    }
+
+    fun setSessionState(isActive: Boolean) {
+        _sessionState.value = isActive
     }
 }
