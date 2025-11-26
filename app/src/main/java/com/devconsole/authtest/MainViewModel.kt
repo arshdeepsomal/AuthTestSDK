@@ -55,7 +55,9 @@ class MainViewModel(application: Application): AndroidViewModel(application) {
             authManager.fetchAuthState().collect { authState ->
                 _authState.value = authState
             }
+        }
 
+        viewModelScope.launch {
             authManager.fetchSessionState().collect { isSessionActive ->
                 _sessionActive.value = isSessionActive
             }
