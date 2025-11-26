@@ -1,13 +1,13 @@
-package com.devconsole.auth_sdk.auth
+package com.devconsole.auth_sdk.auth.client
 
 import android.content.Context
 import android.content.Intent
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.net.toUri
-import com.devconsole.auth_sdk.data.Configuration
-import com.devconsole.auth_sdk.delegate.AuthServiceProvider
-import com.devconsole.auth_sdk.delegate.DefaultAuthServiceProvider
+import com.devconsole.auth_sdk.auth.delegate.AuthServiceProvider
+import com.devconsole.auth_sdk.auth.delegate.DefaultAuthServiceProvider
+import com.devconsole.auth_sdk.auth.model.Configuration
 import com.devconsole.auth_sdk.network.Constants.GRANT_TYPE
 import com.devconsole.auth_sdk.network.Constants.LOGIN_SCOPES
 import com.devconsole.auth_sdk.network.Constants.PATH_AUTHORIZE

@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.session
+package com.devconsole.auth_sdk.core.session
 
 import android.content.Context
 import androidx.datastore.core.DataStore

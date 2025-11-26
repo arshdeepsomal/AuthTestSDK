@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.delegate
+package com.devconsole.auth_sdk.auth.delegate
 
 import android.app.Activity
 import android.content.Context
@@ -6,18 +6,18 @@ import android.content.Intent
 import android.os.Build
 import androidx.activity.result.ActivityResult
 import androidx.annotation.RequiresApi
-import com.devconsole.auth_sdk.AuthApi
-import com.devconsole.auth_sdk.auth.OneAuthClient
-import com.devconsole.auth_sdk.auth.ReceiptResultHandler
-import com.devconsole.auth_sdk.auth.TwoAuthClient
-import com.devconsole.auth_sdk.data.AuthState
-import com.devconsole.auth_sdk.data.Configuration
-import com.devconsole.auth_sdk.data.ONEAuthException
+import com.devconsole.auth_sdk.auth.api.AuthApi
+import com.devconsole.auth_sdk.auth.client.OneAuthClient
+import com.devconsole.auth_sdk.auth.client.TwoAuthClient
+import com.devconsole.auth_sdk.auth.handler.ReceiptResultHandler
+import com.devconsole.auth_sdk.auth.model.AuthState
+import com.devconsole.auth_sdk.auth.model.Configuration
+import com.devconsole.auth_sdk.auth.model.ONEAuthException
 import com.devconsole.auth_sdk.network.data.ONETokenData
 import com.devconsole.auth_sdk.network.data.TWOLogoutRequest
 import com.devconsole.auth_sdk.network.data.TWOTokenData
-import com.devconsole.auth_sdk.session.SessionData
-import com.devconsole.auth_sdk.session.SessionManager
+import com.devconsole.auth_sdk.core.session.SessionData
+import com.devconsole.auth_sdk.core.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

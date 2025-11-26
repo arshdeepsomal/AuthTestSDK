@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.auth
+package com.devconsole.auth_sdk.auth.handler
 
 import com.devconsole.auth_sdk.network.data.SubmitReceiptData
 import com.devconsole.auth_sdk.network.data.TWOTokenData

@@ -6,10 +6,10 @@ import android.provider.Settings
 import androidx.activity.result.ActivityResult
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.devconsole.auth_sdk.AuthManager
-import com.devconsole.auth_sdk.data.AuthState
-import com.devconsole.auth_sdk.data.Configuration
-import com.devconsole.auth_sdk.session.SessionData
+import com.devconsole.auth_sdk.auth.AuthManager
+import com.devconsole.auth_sdk.auth.model.AuthState
+import com.devconsole.auth_sdk.auth.model.Configuration
+import com.devconsole.auth_sdk.core.session.SessionData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch

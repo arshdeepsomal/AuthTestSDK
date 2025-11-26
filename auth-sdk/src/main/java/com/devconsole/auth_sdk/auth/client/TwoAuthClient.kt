@@ -1,6 +1,6 @@
-package com.devconsole.auth_sdk.auth
+package com.devconsole.auth_sdk.auth.client
 
-import com.devconsole.auth_sdk.data.Configuration
+import com.devconsole.auth_sdk.auth.model.Configuration
 import com.devconsole.auth_sdk.network.api.RetrofitManager
 import com.devconsole.auth_sdk.network.api.TWOAuthService
 import com.devconsole.auth_sdk.network.data.SubmitGoogleData
