@@ -4,6 +4,7 @@ import android.app.Application
 import com.devconsole.auth_sdk.network.data.ONETokenData
 import com.devconsole.auth_sdk.network.data.TWOTokenData
 import com.devconsole.auth_sdk.network.security.JWTEncryption
+import com.devconsole.auth_sdk.testutil.SecurityProviderRule
 import io.mockk.MockKAnnotations
 import io.mockk.anyConstructed
 import io.mockk.coEvery
@@ -14,6 +15,7 @@ import io.mockk.unmockkAll
 import kotlinx.coroutines.flow.flowOf
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RuntimeEnvironment
@@ -23,6 +25,9 @@ import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class SessionManagerDelegateTest {
+
+    @get:Rule
+    val securityProviderRule = SecurityProviderRule()
 
     private lateinit var context: Application
 
