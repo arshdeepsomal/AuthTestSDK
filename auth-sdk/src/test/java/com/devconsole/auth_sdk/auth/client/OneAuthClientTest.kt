@@ -40,8 +40,8 @@ class OneAuthClientTest {
 
     @Before
     fun setup() {
-        mockkStatic(AuthorizationResponse::class)
-        mockkStatic(AuthorizationException::class)
+        mockkStatic("net.openid.appauth.AuthorizationResponse")
+        mockkStatic("net.openid.appauth.AuthorizationException")
         mockkObject(RetrofitManager)
         mockkConstructor(com.devconsole.auth_sdk.network.security.JWTEncryption::class)
     }
@@ -84,10 +84,9 @@ class OneAuthClientTest {
         val tokenRequest = mockk<TokenRequest> {
             every { codeVerifier } returns "code-verifier"
         }
-        val response = mockk<AuthorizationResponse> {
-            every { createTokenExchangeRequest() } returns tokenRequest
-            every { authorizationCode } returns "auth-code"
-        }
+        val response = mockk<AuthorizationResponse>()
+        every { response.createTokenExchangeRequest() } returns tokenRequest
+        every { response.authorizationCode } returns "auth-code"
         every { AuthorizationResponse.fromIntent(any()) } returns response
         every { AuthorizationException.fromIntent(any()) } returns null
 
