@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.data
+package com.devconsole.auth_sdk.auth.model
 
 /**
  * This sealed class is for the configuration of one and two auth.

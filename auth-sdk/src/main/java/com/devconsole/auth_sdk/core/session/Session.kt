@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.session
+package com.devconsole.auth_sdk.core.session
 
 internal interface Session {
     fun getSession(): SessionData?

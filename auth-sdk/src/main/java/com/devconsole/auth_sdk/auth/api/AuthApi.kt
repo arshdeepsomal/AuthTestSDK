@@ -1,7 +1,7 @@
-package com.devconsole.auth_sdk
+package com.devconsole.auth_sdk.auth.api
 
 import androidx.activity.result.ActivityResult
-import com.devconsole.auth_sdk.data.AuthState
+import com.devconsole.auth_sdk.auth.model.AuthState
 import kotlinx.coroutines.flow.StateFlow
 
 internal interface AuthApi {
@@ -9,7 +9,7 @@ internal interface AuthApi {
     fun register()
     fun handleIntentResult(result: ActivityResult)
     fun logout()
-    fun refreshToken(): Boolean
+    suspend fun refreshToken(): Boolean
     fun loginWithGoogleReceipt(purchaseToken: String)
     fun submitGoogleReceiptAndLinkAccount(
         purchaseToken: String,
