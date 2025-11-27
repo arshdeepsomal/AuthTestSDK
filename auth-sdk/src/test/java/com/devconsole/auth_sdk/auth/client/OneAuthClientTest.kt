@@ -81,7 +81,7 @@ class OneAuthClientTest {
         }
         every { RetrofitManager.getInstance(any()) } returns retrofit
 
-        every { AuthorizationException.fromIntent(intent) } returns null
+        every { AuthorizationException.fromIntent(any()) } returns null
 
         val tokenRequest = mockk<TokenRequest> {
             every { codeVerifier } returns "code-verifier"
@@ -90,7 +90,7 @@ class OneAuthClientTest {
             every { createTokenExchangeRequest() } returns tokenRequest
             every { authorizationCode } returns "auth-code"
         }
-        every { AuthorizationResponse.fromIntent(intent) } returns response
+        every { AuthorizationResponse.fromIntent(any()) } returns response
 
         val client = OneAuthClient(context, config)
 
