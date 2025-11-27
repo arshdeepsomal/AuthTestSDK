@@ -31,15 +31,14 @@ internal class ONEAuthDelegate(
     private val sessionManager: SessionManager,
     private val oneConfig: Configuration.ONE.Auth,
     private val twoConfig: Configuration.TWO.Auth,
+    private val oneAuthClient: OneAuthClient = OneAuthClient(context, oneConfig),
+    private val twoAuthClient: TwoAuthClient = TwoAuthClient(twoConfig),
 ) : AuthApi {
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     private val _state = MutableStateFlow<AuthState>(AuthState.UnInitialize)
     override val state: StateFlow<AuthState> = _state
-
-    private val oneAuthClient = OneAuthClient(context, oneConfig)
-    private val twoAuthClient = TwoAuthClient(twoConfig)
 
     private val receiptHandler = ReceiptResultHandler(::saveSession, ::handleError)
     override val sessionState: StateFlow<Boolean> = sessionManager.sessionState
