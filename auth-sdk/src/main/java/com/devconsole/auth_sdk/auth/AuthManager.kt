@@ -14,11 +14,9 @@ class AuthManager(
     val context: Context,
     ONEConfig: Configuration.ONE.Auth,
     TWOConfig: Configuration.TWO.Auth,
+    private val authApi: AuthApi = DefaultDelegateProvider.provide()(context, ONEConfig, TWOConfig),
+    private val sessionManager: SessionManager = SessionManager(context)
 ) {
-
-    private val authApi: AuthApi by lazy { DefaultDelegateProvider.provide()(context, ONEConfig, TWOConfig) }
-
-    private val sessionManager = SessionManager(context)
 
     fun fetchAuthState(): StateFlow<AuthState> {
         return authApi.state

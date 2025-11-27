@@ -4,9 +4,12 @@ import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-internal class SessionManager(val context: Context) {
+internal class SessionManager(
+    val context: Context,
+    sessionDelegateProvider: SessionDelegateProvider = DefaultSessionDelegateProvider
+) {
 
-    private var session: Session = DefaultSessionDelegateProvider.provide()(context)
+    private var session: Session = sessionDelegateProvider.provide()(context)
 
     private val _sessionState = MutableStateFlow(!session.hasTokenExpired())
     val sessionState: StateFlow<Boolean> = _sessionState

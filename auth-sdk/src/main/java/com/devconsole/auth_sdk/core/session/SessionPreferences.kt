@@ -2,29 +2,36 @@ package com.devconsole.auth_sdk.core.session
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
-import com.devconsole.auth_sdk.network.security.encryptedGsonSerializer
+import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.Serializer
+import androidx.datastore.dataStoreFile
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 private const val SESSION_FILE_NAME = "user_data"
 
-val Context.sessionDataStore: DataStore<SessionData?> by dataStore(
-    fileName = SESSION_FILE_NAME,
-    serializer = encryptedGsonSerializer(
-        defaultValue = null
-    )
-)
+class SessionPreferences(
+    context: Context,
+    serializer: Serializer<SessionData?>,
+    coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+) {
 
-class SessionPreferences(val context: Context) {
+    private val dataStore: DataStore<SessionData?> = DataStoreFactory.create(
+        serializer = serializer,
+        scope = coroutineScope,
+        produceFile = { context.dataStoreFile(SESSION_FILE_NAME) }
+    )
 
     suspend fun updateSessionData(newValue: SessionData) {
-        context.sessionDataStore.updateData { newValue }
+        dataStore.updateData { newValue }
     }
 
-    fun getSessionData(): Flow<SessionData?> = context.sessionDataStore.data
+    fun getSessionData(): Flow<SessionData?> = dataStore.data
 
     suspend fun clearSession() {
-        context.sessionDataStore.updateData {
+        dataStore.updateData {
             null
         }
     }
