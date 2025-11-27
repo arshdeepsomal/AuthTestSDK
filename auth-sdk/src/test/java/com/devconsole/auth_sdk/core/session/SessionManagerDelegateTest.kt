@@ -15,10 +15,13 @@ import kotlinx.coroutines.flow.flowOf
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+@RunWith(RobolectricTestRunner::class)
 class SessionManagerDelegateTest {
 
     private lateinit var context: Application

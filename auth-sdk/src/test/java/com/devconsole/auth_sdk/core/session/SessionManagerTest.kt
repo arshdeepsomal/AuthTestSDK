@@ -14,8 +14,11 @@ import io.mockk.verify
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class SessionManagerTest {
 
     @MockK(relaxed = true)
