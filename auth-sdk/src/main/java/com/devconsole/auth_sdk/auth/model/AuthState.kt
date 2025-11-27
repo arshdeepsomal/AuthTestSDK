@@ -1,7 +1,7 @@
-package com.devconsole.auth_sdk.data
+package com.devconsole.auth_sdk.auth.model
 
 import android.content.Intent
-import com.devconsole.auth_sdk.session.SessionData
+import com.devconsole.auth_sdk.core.session.SessionData
 
 sealed class AuthState {
     // Default AuthState.

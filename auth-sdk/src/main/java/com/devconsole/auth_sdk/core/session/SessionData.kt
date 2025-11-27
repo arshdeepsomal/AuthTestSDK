@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.session
+package com.devconsole.auth_sdk.core.session
 
 import com.devconsole.auth_sdk.network.data.TWOTokenData
 import com.devconsole.auth_sdk.network.data.ONETokenData

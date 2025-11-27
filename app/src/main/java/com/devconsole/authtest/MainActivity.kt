@@ -24,7 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.devconsole.auth_sdk.data.AuthState
+import com.devconsole.auth_sdk.auth.model.AuthState
 import com.devconsole.authtest.ui.theme.AuthTestTheme
 
 class MainActivity : ComponentActivity() {
