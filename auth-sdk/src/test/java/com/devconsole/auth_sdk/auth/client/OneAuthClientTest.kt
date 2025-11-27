@@ -82,8 +82,11 @@ class OneAuthClientTest {
 
         every { AuthorizationException.fromIntent(intent) } returns null
 
-        val response = mockkClass(AuthorizationResponse::class) {
-            every { createTokenExchangeRequest().codeVerifier } returns "code-verifier"
+        val tokenRequest = mockk<AuthorizationRequest> {
+            every { codeVerifier } returns "code-verifier"
+        }
+        val response = mockk<AuthorizationResponse> {
+            every { createTokenExchangeRequest() } returns tokenRequest
             every { authorizationCode } returns "auth-code"
         }
         every { AuthorizationResponse.fromIntent(intent) } returns response
