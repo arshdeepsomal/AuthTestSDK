@@ -81,9 +81,8 @@ class OneAuthClientTest {
         }
         every { RetrofitManager.getInstance(any()) } returns retrofit
 
-        val tokenRequest = mockk<TokenRequest> {
-            every { codeVerifier } returns "code-verifier"
-        }
+        val tokenRequest = mockkClass(TokenRequest::class)
+        every { tokenRequest.codeVerifier } returns "code-verifier"
         val response = mockk<AuthorizationResponse>()
         every { response.createTokenExchangeRequest() } returns tokenRequest
         every { response.authorizationCode } returns "auth-code"
