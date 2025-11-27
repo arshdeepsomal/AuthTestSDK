@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.devconsole.auth_sdk.network.security.JWTEncryption
-import com.devconsole.auth_sdk.network.security.encryptedGsonSerializer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -15,10 +14,7 @@ import java.util.Date
 
 internal class SessionManagerDelegate(
     val context: Context,
-    private val sessionPreferences: SessionPreferences = SessionPreferences(
-        context = context,
-        serializer = encryptedGsonSerializer(defaultValue = null)
-    )
+    private val sessionPreferences: SessionPreferences = defaultSessionPreferences(context)
 ) : Session {
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO)

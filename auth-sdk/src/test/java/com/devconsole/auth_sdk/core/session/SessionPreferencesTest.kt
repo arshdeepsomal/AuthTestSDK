@@ -3,7 +3,7 @@ package com.devconsole.auth_sdk.core.session
 import com.devconsole.auth_sdk.network.data.ONETokenData
 import com.devconsole.auth_sdk.network.data.TWOTokenData
 import com.devconsole.auth_sdk.testutil.SecurityProviderRule
-import com.devconsole.auth_sdk.testutil.plainSessionSerializer
+import com.devconsole.auth_sdk.core.session.plainSessionSerializer
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
