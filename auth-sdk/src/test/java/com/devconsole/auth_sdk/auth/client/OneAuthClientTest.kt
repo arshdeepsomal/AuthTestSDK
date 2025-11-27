@@ -19,6 +19,7 @@ import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
+import net.openid.appauth.TokenRequest
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -82,7 +83,7 @@ class OneAuthClientTest {
 
         every { AuthorizationException.fromIntent(intent) } returns null
 
-        val tokenRequest = mockk<AuthorizationRequest> {
+        val tokenRequest = mockk<TokenRequest> {
             every { codeVerifier } returns "code-verifier"
         }
         val response = mockk<AuthorizationResponse> {
