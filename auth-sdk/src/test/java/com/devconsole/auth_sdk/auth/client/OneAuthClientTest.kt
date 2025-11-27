@@ -40,8 +40,8 @@ class OneAuthClientTest {
 
     @Before
     fun setup() {
-        mockkStatic("net.openid.appauth.AuthorizationResponse")
-        mockkStatic("net.openid.appauth.AuthorizationException")
+        mockkStatic(AuthorizationResponse::class)
+        mockkStatic(AuthorizationException::class)
         mockkObject(RetrofitManager)
         mockkConstructor(com.devconsole.auth_sdk.network.security.JWTEncryption::class)
     }
