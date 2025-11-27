@@ -14,21 +14,9 @@ class CryptoManager(
     transformation: String = TRANSFORMATION
 ) : Crypto {
 
-    private val cipher: Cipher = try {
-        Cipher.getInstance(transformation)
-    } catch (_: Exception) {
-        Cipher.getInstance(FALLBACK_TRANSFORMATION)
-    }
+    private val cipher: Cipher = Cipher.getInstance(transformation)
 
-    private val keyStore: KeyStore? = try {
-        KeyStore.getInstance(keystoreProvider).apply { load(null) }
-    } catch (_: Exception) {
-        null
-    }
-
-    private val fallbackKey: SecretKey by lazy {
-        KeyGenerator.getInstance(ALGORITHM).apply { init(256) }.generateKey()
-    }
+    private val keyStore: KeyStore = KeyStore.getInstance(keystoreProvider).apply { load(null) }
 
     private fun getKey(): SecretKey {
         val existingKey = keyStore
@@ -37,8 +25,6 @@ class CryptoManager(
     }
 
     private fun createKey(): SecretKey {
-        if (keyStore == null) return fallbackKey
-
         val keyGenerator = KeyGenerator.getInstance(ALGORITHM, keystoreProvider)
         val spec = KeyGenParameterSpec.Builder(
             keyAlias,
@@ -86,7 +72,6 @@ class CryptoManager(
         private const val BLOCK_MODE = KeyProperties.BLOCK_MODE_CBC
         private const val PADDING = KeyProperties.ENCRYPTION_PADDING_PKCS7
         private const val TRANSFORMATION = "$ALGORITHM/$BLOCK_MODE/$PADDING"
-        private const val FALLBACK_TRANSFORMATION = "$ALGORITHM/$BLOCK_MODE/PKCS5Padding"
     }
 }
 
