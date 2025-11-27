@@ -16,6 +16,7 @@ import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import net.openid.appauth.AuthorizationRequest
+import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
 import net.openid.appauth.TokenRequest
@@ -39,7 +40,8 @@ class OneAuthClientTest {
 
     @Before
     fun setup() {
-        mockkStatic(AuthorizationResponse::class)
+        mockkStatic("net.openid.appauth.AuthorizationResponse")
+        mockkStatic("net.openid.appauth.AuthorizationException")
         mockkObject(RetrofitManager)
         mockkConstructor(com.devconsole.auth_sdk.network.security.JWTEncryption::class)
     }
@@ -87,6 +89,7 @@ class OneAuthClientTest {
             every { authorizationCode } returns "auth-code"
         }
         every { AuthorizationResponse.fromIntent(any()) } returns response
+        every { AuthorizationException.fromIntent(any()) } returns null
 
         val client = OneAuthClient(context, config)
 
