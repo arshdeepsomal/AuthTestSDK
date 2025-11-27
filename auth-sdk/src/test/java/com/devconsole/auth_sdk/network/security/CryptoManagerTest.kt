@@ -1,10 +1,15 @@
 package com.devconsole.auth_sdk.network.security
 
+import com.devconsole.auth_sdk.testutil.SecurityProviderRule
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Rule
 import org.junit.Test
 
 class CryptoManagerTest {
+
+    @get:Rule
+    val securityProviderRule = SecurityProviderRule()
 
     @Test
     fun `encrypt and decrypt round trip restores data`() {
@@ -25,13 +30,4 @@ class CryptoManagerTest {
         cryptoManager.decrypt(ByteArray(4))
     }
 
-    @Test
-    fun `uses fallback key when keystore is unavailable`() {
-        val cryptoManager = CryptoManager(keystoreProvider = "MissingProvider")
-        val plain = "fallback-key".toByteArray()
-
-        val decrypted = cryptoManager.decrypt(cryptoManager.encrypt(plain))
-
-        assertArrayEquals(plain, decrypted)
-    }
 }

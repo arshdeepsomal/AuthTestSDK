@@ -1,5 +1,6 @@
 package com.devconsole.auth_sdk.network.security
 
+import com.devconsole.auth_sdk.testutil.SecurityProviderRule
 import com.google.gson.Gson
 import io.mockk.MockKAnnotations
 import io.mockk.every
@@ -12,11 +13,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 class EncryptedJsonSerializerTest {
+
+    @get:Rule
+    val securityProviderRule = SecurityProviderRule()
 
     @MockK
     lateinit var cryptoManager: CryptoManager
