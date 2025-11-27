@@ -135,7 +135,7 @@ internal class OneAuthClient(
             "state" to REGISTER_STATE,
             "nonce" to config.nounce,
             "prompt" to PROMPT,
-            "max_age" to com.devconsole.auth_sdk.network.Constants.MAX_AGE,
+            "max_age" to com.devconsole.auth_sdk.network.Constants.MAX_AGE.toString(),
         )
     }
 }
