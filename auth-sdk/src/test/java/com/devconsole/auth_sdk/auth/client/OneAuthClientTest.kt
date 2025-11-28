@@ -13,9 +13,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkObject
-import io.mockk.mockkStatic
 import io.mockk.unmockkAll
-import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
@@ -40,8 +38,6 @@ class OneAuthClientTest {
 
     @Before
     fun setup() {
-        mockkStatic(AuthorizationResponse::class)
-        mockkStatic(AuthorizationException::class)
         mockkObject(RetrofitManager)
         mockkConstructor(com.devconsole.auth_sdk.network.security.JWTEncryption::class)
     }
@@ -70,7 +66,6 @@ class OneAuthClientTest {
 
     @Test
     fun `exchangeToken returns success when response and token are valid`() = kotlinx.coroutines.runBlocking {
-        val intent = Intent()
         val tokenData = ONETokenData(accessToken = "access", refreshToken = "refresh")
 
         val service = mockk<ONEAuthService> {
@@ -93,15 +88,14 @@ class OneAuthClientTest {
         )
             .setCodeVerifier("code-verifier")
             .build()
-        val response = AuthorizationResponse.Builder(authRequest)
+        val responseIntent = AuthorizationResponse.Builder(authRequest)
             .setAuthorizationCode("auth-code")
             .build()
-        every { AuthorizationResponse.fromIntent(any()) } returns response
-        every { AuthorizationException.fromIntent(any()) } returns null
+            .toIntent()
 
         val client = OneAuthClient(context, config)
 
-        val result = client.exchangeToken(intent)
+        val result = client.exchangeToken(responseIntent)
 
         assert(result.isSuccess)
         assert(result.getOrNull() == tokenData)
