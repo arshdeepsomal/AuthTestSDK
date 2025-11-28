@@ -14,17 +14,13 @@ class CryptoManager(
     transformation: String = TRANSFORMATION
 ) : Crypto {
 
-    private val cipher = Cipher.getInstance(transformation)
+    private val cipher: Cipher = Cipher.getInstance(transformation)
 
-    private val keyStore: KeyStore = KeyStore
-        .getInstance(ANDROID_KEYSTORE_PROVIDER)
-        .apply {
-            load(null)
-        }
+    private val keyStore: KeyStore = KeyStore.getInstance(keystoreProvider).apply { load(null) }
 
     private fun getKey(): SecretKey {
         val existingKey = keyStore
-            .getEntry(DEFAULT_KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
+            ?.getEntry(DEFAULT_KEY_ALIAS, null) as? KeyStore.SecretKeyEntry
         return existingKey?.secretKey ?: createKey()
     }
 
