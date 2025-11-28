@@ -2,6 +2,7 @@ package com.devconsole.auth_sdk.auth.client
 
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
+import androidx.core.net.toUri
 import com.devconsole.auth_sdk.auth.delegate.AuthServiceProvider
 import com.devconsole.auth_sdk.auth.model.Configuration
 import com.devconsole.auth_sdk.network.api.ONEAuthService
@@ -10,16 +11,15 @@ import com.devconsole.auth_sdk.network.data.ONETokenData
 import io.mockk.anyConstructed
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkClass
 import io.mockk.mockkConstructor
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
-import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationException
+import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
-import net.openid.appauth.TokenRequest
+import net.openid.appauth.AuthorizationServiceConfiguration
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -81,11 +81,21 @@ class OneAuthClientTest {
         }
         every { RetrofitManager.getInstance(any()) } returns retrofit
 
-        val tokenRequest = mockk<TokenRequest>(relaxed = true)
-        every { tokenRequest.codeVerifier } returns "code-verifier"
-        val response = mockk<AuthorizationResponse>()
-        every { response.createTokenExchangeRequest() } returns tokenRequest
-        every { response.authorizationCode } returns "auth-code"
+        val authServiceConfig = AuthorizationServiceConfiguration(
+            "${config.baseUrl}auth".toUri(),
+            "${config.baseUrl}token".toUri()
+        )
+        val authRequest = AuthorizationRequest.Builder(
+            authServiceConfig,
+            config.clientId,
+            AuthorizationRequest.ResponseTypeValues.CODE,
+            config.redirectUri.toUri()
+        )
+            .setCodeVerifier("code-verifier")
+            .build()
+        val response = AuthorizationResponse.Builder(authRequest)
+            .setAuthorizationCode("auth-code")
+            .build()
         every { AuthorizationResponse.fromIntent(any()) } returns response
         every { AuthorizationException.fromIntent(any()) } returns null
 
