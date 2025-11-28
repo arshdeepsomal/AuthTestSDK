@@ -22,7 +22,7 @@ import org.robolectric.RobolectricTestRunner
 class SessionManagerTest {
 
     @MockK(relaxed = true)
-    lateinit var session: Session
+    lateinit var session: SessionStore
 
     private lateinit var manager: SessionManager
 

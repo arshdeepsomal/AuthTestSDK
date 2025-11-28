@@ -1,11 +1,8 @@
 package com.devconsole.auth_sdk.auth
 
-import android.content.Context
 import androidx.activity.result.ActivityResult
 import com.devconsole.auth_sdk.auth.api.AuthApi
-import com.devconsole.auth_sdk.auth.delegate.DefaultDelegateProvider
 import com.devconsole.auth_sdk.auth.model.AuthState
-import com.devconsole.auth_sdk.auth.model.Configuration
 import com.devconsole.auth_sdk.core.session.SessionData
 import com.devconsole.auth_sdk.network.data.ONETokenData
 import com.devconsole.auth_sdk.network.data.TWOTokenData
@@ -13,7 +10,6 @@ import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.mockk
-import io.mockk.mockkObject
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
@@ -21,25 +17,6 @@ import org.junit.Before
 import org.junit.Test
 
 class AuthManagerTest {
-
-    @MockK(relaxed = true)
-    lateinit var context: Context
-
-    private val oneConfig = Configuration.ONE.Auth(
-        baseUrl = "https://one.example/",
-        clientId = "client",
-        clientSecret = "secret",
-        redirectUri = "app://redirect",
-        nounce = "nonce",
-        salt = "salt"
-    )
-    private val twoConfig = Configuration.TWO.Auth(
-        baseUrl = "https://two.example/",
-        authorization = "auth",
-        brand = "brand",
-        source = "android",
-        deviceId = "device"
-    )
 
     private val authState = MutableStateFlow<AuthState>(AuthState.UnInitialize)
     private val sessionState = MutableStateFlow(false)
@@ -60,9 +37,7 @@ class AuthManagerTest {
             every { state } returns authState
             every { sessionState } returns sessionState
         }
-        mockkObject(DefaultDelegateProvider)
-        every { DefaultDelegateProvider.provide() } returns { _, _, _ -> api }
-        val manager = AuthManager(context, oneConfig, twoConfig, api, mockk(relaxed = true))
+        val manager = AuthManager(api, mockk(relaxed = true))
         val result = mockk<ActivityResult>()
 
         manager.login()
@@ -91,12 +66,10 @@ class AuthManagerTest {
             every { sessionState } returns sessionState
         }
         val sessionData = SessionData("code", ONETokenData(), TWOTokenData())
-        mockkObject(DefaultDelegateProvider)
-        every { DefaultDelegateProvider.provide() } returns { _, _, _ -> api }
         val sessionManager = mockk<com.devconsole.auth_sdk.core.session.SessionManager>()
         every { sessionManager.getSession() } returns sessionData
 
-        val manager = AuthManager(context, oneConfig, twoConfig, api, sessionManager)
+        val manager = AuthManager(api, sessionManager)
 
         assert(manager.fetchAuthState() === authState)
         assert(manager.fetchSessionState() === sessionState)

@@ -15,7 +15,7 @@ import java.util.Date
 internal class SessionManagerDelegate(
     val context: Context,
     private val sessionPreferences: SessionPreferences = defaultSessionPreferences(context)
-) : Session {
+) : SessionStore {
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 

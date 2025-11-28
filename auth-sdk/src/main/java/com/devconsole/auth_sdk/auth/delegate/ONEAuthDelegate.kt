@@ -20,6 +20,7 @@ import com.devconsole.auth_sdk.core.session.SessionData
 import com.devconsole.auth_sdk.core.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -33,9 +34,8 @@ internal class ONEAuthDelegate(
     private val twoConfig: Configuration.TWO.Auth,
     private val oneAuthClient: OneAuthClient = OneAuthClient(context, oneConfig),
     private val twoAuthClient: TwoAuthClient = TwoAuthClient(twoConfig),
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 ) : AuthApi {
-
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     private val _state = MutableStateFlow<AuthState>(AuthState.UnInitialize)
     override val state: StateFlow<AuthState> = _state

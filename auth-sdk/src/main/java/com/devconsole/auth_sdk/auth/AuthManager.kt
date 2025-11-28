@@ -3,20 +3,35 @@ package com.devconsole.auth_sdk.auth
 import android.content.Context
 import androidx.activity.result.ActivityResult
 import com.devconsole.auth_sdk.auth.api.AuthApi
+import com.devconsole.auth_sdk.auth.delegate.AuthDelegateProvider
 import com.devconsole.auth_sdk.auth.delegate.DefaultDelegateProvider
 import com.devconsole.auth_sdk.auth.model.AuthState
 import com.devconsole.auth_sdk.auth.model.Configuration
 import com.devconsole.auth_sdk.core.session.SessionData
+import com.devconsole.auth_sdk.core.session.SessionEvent
 import com.devconsole.auth_sdk.core.session.SessionManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class AuthManager(
-    val context: Context,
-    ONEConfig: Configuration.ONE.Auth,
-    TWOConfig: Configuration.TWO.Auth,
-    private val authApi: AuthApi = DefaultDelegateProvider.provide()(context, ONEConfig, TWOConfig),
-    private val sessionManager: SessionManager = SessionManager(context)
+    private val authApi: AuthApi,
+    private val sessionManager: SessionManager
 ) {
+
+    constructor(
+        context: Context,
+        ONEConfig: Configuration.ONE.Auth,
+        TWOConfig: Configuration.TWO.Auth,
+        sessionManager: SessionManager = SessionManager(context),
+        coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+        delegateProvider: AuthDelegateProvider = DefaultDelegateProvider,
+    ) : this(
+        authApi = delegateProvider.provide()(context, ONEConfig, TWOConfig, sessionManager, coroutineScope),
+        sessionManager = sessionManager
+    )
 
     fun fetchAuthState(): StateFlow<AuthState> {
         return authApi.state
@@ -44,6 +59,10 @@ class AuthManager(
 
     fun fetchSessionState(): StateFlow<Boolean> {
         return authApi.sessionState
+    }
+
+    fun sessionEvents(): SharedFlow<SessionEvent> {
+        return sessionManager.sessionEvents
     }
 
     fun loginWithGoogleReceipt(purchaseToken: String) {

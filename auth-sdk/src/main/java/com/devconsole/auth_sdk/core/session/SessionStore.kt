@@ -1,6 +1,6 @@
 package com.devconsole.auth_sdk.core.session
 
-internal interface Session {
+internal interface SessionStore {
     fun getSession(): SessionData?
     fun saveSession(sessionData: SessionData)
     fun clearSession()
