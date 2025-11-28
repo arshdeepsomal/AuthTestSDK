@@ -1,6 +1,7 @@
 package com.devconsole.auth_sdk.core.session
 
 import androidx.datastore.core.Serializer
+import com.devconsole.auth_sdk.network.security.CryptoManager
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,12 +29,17 @@ internal fun plainSessionSerializer(
 }
 
 internal fun defaultSessionPreferences(context: android.content.Context): SessionPreferences {
-    return runCatching {
+    val encryptedPreferences = runCatching {
+        val cryptoManager = CryptoManager()
         SessionPreferences(
             context = context,
-            serializer = com.devconsole.auth_sdk.network.security.encryptedGsonSerializer(defaultValue = null)
+            serializer = com.devconsole.auth_sdk.network.security.encryptedGsonSerializer(
+                defaultValue = null,
+                cryptoManager = cryptoManager
+            )
         )
-    }.getOrElse {
-        SessionPreferences(context = context, serializer = plainSessionSerializer(defaultValue = null))
-    }
+    }.getOrNull()
+
+    return encryptedPreferences
+        ?: SessionPreferences(context = context, serializer = plainSessionSerializer(defaultValue = null))
 }
