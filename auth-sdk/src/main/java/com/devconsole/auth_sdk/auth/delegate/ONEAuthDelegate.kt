@@ -36,13 +36,12 @@ internal class ONEAuthDelegate(
         com.devconsole.auth_sdk.network.api.DefaultAuthServiceProvider,
     sessionDelegateProvider: SessionDelegateProvider = DefaultSessionDelegateProvider,
     private val networkDataSource: AuthNetworkDataSource = DefaultAuthNetworkDataSource(),
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
 ) : AuthApi {
 
     private val sessionManager = SessionManager(context, sessionDelegateProvider)
     private val oneAuthClient = OneAuthClient(context, oneConfig, twoConfig, authServiceProvider, networkDataSource)
     private val twoAuthClient = TwoAuthClient(twoConfig, sessionManager, networkDataSource)
-
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     private val _state = MutableStateFlow<AuthState>(AuthState.UnInitialize)
     override val state: StateFlow<AuthState> get() = _state
