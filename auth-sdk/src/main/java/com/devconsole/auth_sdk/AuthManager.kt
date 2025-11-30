@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.activity.result.ActivityResult
 import com.devconsole.auth_sdk.data.AuthState
 import com.devconsole.auth_sdk.data.Configuration
-import com.devconsole.auth_sdk.delegate.AuthDelegateProvider
-import com.devconsole.auth_sdk.delegate.DefaultDelegateProvider
+import com.devconsole.auth_sdk.auth.delegate.AuthDelegateProvider
+import com.devconsole.auth_sdk.auth.delegate.DefaultDelegateProvider
 import com.devconsole.auth_sdk.session.SessionData
 import com.devconsole.auth_sdk.session.SessionManager
 import kotlinx.coroutines.flow.StateFlow

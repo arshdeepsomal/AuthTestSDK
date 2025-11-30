@@ -1,5 +1,7 @@
-package com.devconsole.auth_sdk.delegate
+package com.devconsole.auth_sdk.auth.client
 
+import com.devconsole.auth_sdk.auth.network.AuthNetworkDataSource
+import com.devconsole.auth_sdk.auth.network.DefaultAuthNetworkDataSource
 import com.devconsole.auth_sdk.data.Configuration
 import com.devconsole.auth_sdk.network.data.ONETokenData
 import com.devconsole.auth_sdk.network.data.SubmitGoogleData

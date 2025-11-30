@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.delegate
+package com.devconsole.auth_sdk.auth.network
 
 import com.devconsole.auth_sdk.network.api.ONEAuthService
 import com.devconsole.auth_sdk.network.api.TWOAuthService

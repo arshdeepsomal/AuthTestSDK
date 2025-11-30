@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.delegate
+package com.devconsole.auth_sdk.auth.delegate
 
 import android.app.Activity
 import android.content.Context
@@ -7,14 +7,18 @@ import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.annotation.RequiresApi
 import com.devconsole.auth_sdk.AuthApi
+import com.devconsole.auth_sdk.auth.client.OneAuthClient
+import com.devconsole.auth_sdk.auth.client.TwoAuthClient
+import com.devconsole.auth_sdk.auth.network.AuthNetworkDataSource
+import com.devconsole.auth_sdk.auth.network.DefaultAuthNetworkDataSource
 import com.devconsole.auth_sdk.data.AuthState
 import com.devconsole.auth_sdk.data.Configuration
 import com.devconsole.auth_sdk.data.ONEAuthException
 import com.devconsole.auth_sdk.network.data.ONETokenData
 import com.devconsole.auth_sdk.session.DefaultSessionDelegateProvider
 import com.devconsole.auth_sdk.session.SessionData
-import com.devconsole.auth_sdk.session.SessionManager
 import com.devconsole.auth_sdk.session.SessionDelegateProvider
+import com.devconsole.auth_sdk.session.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

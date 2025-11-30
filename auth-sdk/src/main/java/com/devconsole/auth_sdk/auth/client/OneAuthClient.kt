@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.delegate
+package com.devconsole.auth_sdk.auth.client
 
 import android.content.Context
 import android.content.Intent
@@ -7,6 +7,8 @@ import androidx.annotation.RequiresApi
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.net.toUri
+import com.devconsole.auth_sdk.auth.network.AuthNetworkDataSource
+import com.devconsole.auth_sdk.auth.network.DefaultAuthNetworkDataSource
 import com.devconsole.auth_sdk.data.Configuration
 import com.devconsole.auth_sdk.network.Constants.GRANT_TYPE
 import com.devconsole.auth_sdk.network.Constants.LOGIN_SCOPES
@@ -17,8 +19,6 @@ import com.devconsole.auth_sdk.network.Constants.PROMPT
 import com.devconsole.auth_sdk.network.Constants.QUERY
 import com.devconsole.auth_sdk.network.Constants.REGISTER_SCOPES
 import com.devconsole.auth_sdk.network.Constants.REGISTER_STATE
-import com.devconsole.auth_sdk.network.api.AuthServiceProvider
-import com.devconsole.auth_sdk.network.api.DefaultAuthServiceProvider
 import com.devconsole.auth_sdk.network.data.Claims
 import com.devconsole.auth_sdk.network.data.ClaimsRequest
 import com.devconsole.auth_sdk.network.data.ClaimsUserInfo
