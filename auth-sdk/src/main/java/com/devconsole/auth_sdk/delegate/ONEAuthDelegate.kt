@@ -23,26 +23,27 @@ import com.devconsole.auth_sdk.network.Constants.PROMPT
 import com.devconsole.auth_sdk.network.Constants.QUERY
 import com.devconsole.auth_sdk.network.Constants.REGISTER_SCOPES
 import com.devconsole.auth_sdk.network.Constants.REGISTER_STATE
-import com.devconsole.auth_sdk.network.security.JWTEncryption
-import com.devconsole.auth_sdk.network.api.TWOAuthService
-import com.devconsole.auth_sdk.network.api.ONEAuthService
-import com.devconsole.auth_sdk.network.api.RetrofitManager
+import com.devconsole.auth_sdk.network.api.AuthServiceProvider
+import com.devconsole.auth_sdk.network.api.DefaultAuthServiceProvider
 import com.devconsole.auth_sdk.network.data.Claims
 import com.devconsole.auth_sdk.network.data.ClaimsRequest
 import com.devconsole.auth_sdk.network.data.ClaimsUserInfo
 import com.devconsole.auth_sdk.network.data.ONEGetTokenForPKRequest
-import com.devconsole.auth_sdk.network.data.TWOGoogleReceiptLoginRequest
-import com.devconsole.auth_sdk.network.data.TWOLoginRequest
-import com.devconsole.auth_sdk.network.data.TWOLogoutRequest
-import com.devconsole.auth_sdk.network.data.TWORenewTokenData
-import com.devconsole.auth_sdk.network.data.TWORenewTokenRequest
-import com.devconsole.auth_sdk.network.data.TWOTokenData
 import com.devconsole.auth_sdk.network.data.ONETokenData
 import com.devconsole.auth_sdk.network.data.ONETokenRequest
 import com.devconsole.auth_sdk.network.data.SubmitGoogleData
 import com.devconsole.auth_sdk.network.data.SubmitGoogleReceiptDataLinkAccount
+import com.devconsole.auth_sdk.network.data.SubmitReceiptData
+import com.devconsole.auth_sdk.network.data.TWOGoogleReceiptLoginRequest
+import com.devconsole.auth_sdk.network.data.TWOLoginRequest
+import com.devconsole.auth_sdk.network.data.TWOLogoutRequest
+import com.devconsole.auth_sdk.network.data.TWORenewTokenRequest
+import com.devconsole.auth_sdk.network.data.TWOTokenData
+import com.devconsole.auth_sdk.network.security.JWTEncryption
+import com.devconsole.auth_sdk.session.DefaultSessionDelegateProvider
 import com.devconsole.auth_sdk.session.SessionData
 import com.devconsole.auth_sdk.session.SessionManager
+import com.devconsole.auth_sdk.session.SessionDelegateProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,9 +61,12 @@ internal class ONEAuthDelegate(
     val context: Context,
     private val oneConfig: Configuration.ONE.Auth,
     private val twoConfig: Configuration.TWO.Auth,
+    authServiceProvider: AuthServiceProvider = DefaultAuthServiceProvider,
+    sessionDelegateProvider: SessionDelegateProvider = DefaultSessionDelegateProvider,
+    private val networkDataSource: AuthNetworkDataSource = DefaultAuthNetworkDataSource(),
 ) : AuthApi {
 
-    private val sessionManager = SessionManager(context)
+    private val sessionManager = SessionManager(context, sessionDelegateProvider)
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
@@ -72,17 +76,13 @@ internal class ONEAuthDelegate(
     private val _sessionState = MutableStateFlow(!isSessionExpired())
     override val sessionState: StateFlow<Boolean> get() = _sessionState
 
-    private val authorizationService = DefaultAuthServiceProvider.provide(context)
+    private val authorizationService = authServiceProvider.provide(context)
 
     private val authServiceConfig = AuthorizationServiceConfiguration(
         "${oneConfig.baseUrl}$PATH_AUTHORIZE".toUri(),
         "${oneConfig.baseUrl}$PATH_TOKEN".toUri()
     )
 
-    /**
-     * This method call setup the [AuthorizationRequest] for SignIn/ login and
-     * then updates the [_state] to [AuthState.LaunchIntent].
-     */
     override fun login() {
         _state.value = AuthState.Loading
         val authRequest = AuthorizationRequest.Builder(
@@ -96,30 +96,21 @@ internal class ONEAuthDelegate(
             .setResponseMode(QUERY)
             .build()
 
-        val authIntent = getAuthIntent(authRequest)
-
-        _state.value = AuthState.LaunchIntent(authIntent)
+        _state.value = AuthState.LaunchIntent(getAuthIntent(authRequest))
     }
 
-    /**
-     * This method call setup the [AuthorizationRequest] for SignUp/ register and
-     * then updates the [_state] to [AuthState.LaunchIntent].
-     */
     override fun register() {
         _state.value = AuthState.Loading
-
-        // get token for private key
-        val accessToken = getTokenForPrivateKey()
-
-        // get private key for registration
-        val privateKey = getTokenForPrivateKey(accessToken)
-
-        callRegister(privateKey)
+        coroutineScope.launch {
+            fetchPrivateKeyForRegistration().onSuccess { privateKey ->
+                callRegister(privateKey)
+            }.onFailure { error ->
+                emitError(error)
+            }
+        }
     }
 
-
     private fun callRegister(privateKey: String) {
-
         val extraParams = mutableMapOf(
             "response_type" to CODE,
             "response_mode" to QUERY,
@@ -155,19 +146,9 @@ internal class ONEAuthDelegate(
             .setAdditionalParameters(requestParams)
             .build()
 
-        val authIntent = getAuthIntent(authRequest)
-        _state.value = AuthState.LaunchIntent(authIntent)
-
+        _state.value = AuthState.LaunchIntent(getAuthIntent(authRequest))
     }
 
-    /**
-     * This method builds the [Intent] to open a [CustomTabsIntent].
-     * This is called for both SignIn and SignUp, and based on [AuthorizationRequest] it opens the
-     * requested page in custom tab.
-     *
-     * The toolbar color can be override by adding  custom color value to your colors.xml file.
-     * For eg: <color name="custom_tab_tool_bar_color" override="true">#FF6200EE</color>
-     */
     fun getAuthIntent(authRequest: AuthorizationRequest): Intent {
         return authorizationService.getAuthorizationRequestIntent(
             authRequest,
@@ -182,24 +163,13 @@ internal class ONEAuthDelegate(
         )
     }
 
-    /**
-     * This method handles the [ActivityResult] and if the [resultData] is not null, it will try
-     * to call the one login api.
-     *
-     * If the Api call is success then the two login api will be called.
-     * If the parsing of [resultData] fails, it gives three types of [AuthorizationException].
-     *    1. With errorDescription = "register" -> This will call the register flow.
-     *    2. With errorDescription = "signIn" -> This will call the login flow.
-     *    3. With errorDescription = "cancel_register" -> This will cancel the flow and get back to
-     *    the screen.
-     */
     override fun handleIntentResult(result: ActivityResult) {
         when (result.resultCode) {
             Activity.RESULT_OK -> {
                 val resultData = result.data
 
                 if (resultData == null) {
-                    _state.value = AuthState.Error(Exception("null result"))
+                    emitError(Exception("null result"))
                     return
                 }
 
@@ -208,15 +178,13 @@ internal class ONEAuthDelegate(
                         "register" -> register()
                         "signIn" -> login()
                         "username" -> login()
-                        "cancel_register" -> _state.value = AuthState.Error(it)
-                        else -> {
-                            _state.value = AuthState.Error(
-                                ONEAuthException(
-                                    errorCode = it.code,
-                                    errorDescription = it.errorDescription
-                                )
+                        "cancel_register" -> emitError(it)
+                        else -> emitError(
+                            ONEAuthException(
+                                errorCode = it.code,
+                                errorDescription = it.errorDescription
                             )
-                        }
+                        )
                     }
                     return
                 }
@@ -224,27 +192,20 @@ internal class ONEAuthDelegate(
                 _state.value = AuthState.Loading
 
                 coroutineScope.launch {
-                    runCatching {
-                        getoneToken(resultData).getOrThrow()
-                    }.onSuccess { data ->
-                        Log.i("success ", (data as ONETokenData).accessToken.toString())
-                        inittwoLogin(data)
-                    }.onFailure { exception ->
-                        _state.value = AuthState.Error(exception)
-                    }
+                    fetchOneToken(resultData)
+                        .onSuccess { data ->
+                            Log.i("success ", data.accessToken.toString())
+                            inittwoLogin(data)
+                        }
+                        .onFailure { exception ->
+                            emitError(exception)
+                        }
                 }
             }
         }
     }
 
-    /**
-     * This method call the api for getting access token from the one.
-     * Firstly, it parses for any kind of [AuthorizationException], if there is an it returns
-     * the [Result] as failure.
-     * Secondly, it calls the one api for the token. If this call gets succesfully completed then
-     * returns the [Result] as success along with the [ONETokenData] object.
-     */
-    private suspend fun getoneToken(intent: Intent): Result<Any> {
+    private suspend fun fetchOneToken(intent: Intent): Result<ONETokenData> {
         AuthorizationException.fromIntent(intent)?.let {
             return Result.failure(it)
         }
@@ -265,25 +226,11 @@ internal class ONEAuthDelegate(
             scope = LOGIN_SCOPES
         )
 
-        val tokenResponse = RetrofitManager.getInstance(oneConfig.baseUrl)
-            .create(ONEAuthService::class.java).getToken(tokenRequest)
-        val tokenData = tokenResponse?.body()?.takeIf { tokenResponse.isSuccessful }
-            ?: run {
-                val errorBody = tokenResponse?.errorBody().toString()
-                return Result.failure(Exception(errorBody))
-            }
-        return Result.success(tokenData)
+        return networkDataSource.requestOneToken(tokenRequest, oneConfig.baseUrl)
     }
 
-    /**
-     * The method call the api of two to fetch the flat_token.
-     * This call uses the assess token generated in the one api call and performs the api call.
-     * On successful call, the session is created and saved locally into [SessionData] object.
-     * [SessionData] is the combination of the [twoConfig.authorization], [ONETokenData] and
-     * [TWOTokenData].
-     */
     private fun inittwoLogin(oneData: ONETokenData) {
-        val TWOLoginRequest = TWOLoginRequest(
+        val twoLoginRequest = TWOLoginRequest(
             accessToken = oneData.accessToken.toString(),
             brand = twoConfig.brand,
             source = twoConfig.source,
@@ -292,117 +239,84 @@ internal class ONEAuthDelegate(
             respondWithUsername = true
         )
         coroutineScope.launch {
-            runCatching {
-                RetrofitManager.getInstance(twoConfig.baseUrl)
-                    .create(TWOAuthService::class.java)
-                    .login(twoConfig.authorization, TWOLoginRequest)
-            }.onSuccess { twoResponse ->
-                val twoTokenData = twoResponse?.body()?.takeIf { twoResponse.isSuccessful }
-                    ?: run {
-                        val errorBody = twoResponse?.errorBody().toString()
-                        _state.value = AuthState.Error(Exception(errorBody))
-                        return@launch
-                    }
-
-                if (twoTokenData.success == true) {
-                    val sessionData = SessionData(
-                        authorizationCode = twoConfig.authorization,
-                        ONETokenData = oneData,
-                        TWOTokenData = twoTokenData
-                    )
-                    sessionManager.saveSession(sessionData)
-                    _state.value = AuthState.AuthSuccess(sessionData)
-                    setSessionState(true)
-                } else {
-                    _state.value = AuthState.Error(Exception("Something went wrong."))
-                    setSessionState(false)
+            networkDataSource.loginTwo(twoLoginRequest, twoConfig.authorization, twoConfig.baseUrl)
+                .onSuccess { twoTokenData ->
+                    handleTwoLoginSuccess(oneData, twoTokenData)
                 }
-            }.onFailure {
-                _state.value = AuthState.Error(it)
-            }
+                .onFailure { emitError(it) }
         }
     }
 
-    /**
-     * This method call the logout api of two. This will remove the current session from the
-     * custom tab as well.
-     * And also will clear the session from the local storage as well.
-     */
+    private fun handleTwoLoginSuccess(oneData: ONETokenData, twoTokenData: TWOTokenData) {
+        if (twoTokenData.success == true) {
+            persistSession(createSession(twoTokenData, oneData))
+        } else {
+            emitError(Exception("Something went wrong."))
+            setSessionState(false)
+        }
+    }
+
     override fun logout() {
         _state.value = AuthState.Loading
         val currentSession = sessionManager.getSession()
-        val TWOLogoutRequest = TWOLogoutRequest(
+        val twoLogoutRequest = TWOLogoutRequest(
             idToken = currentSession?.ONETokenData?.idToken,
             flatToken = currentSession?.TWOTokenData?.encodedJwt
         )
         coroutineScope.launch {
-            runCatching {
-                RetrofitManager.getInstance(twoConfig.baseUrl)
-                    .create(TWOAuthService::class.java)
-                    .logout(currentSession?.authorizationCode, TWOLogoutRequest)
-            }.onSuccess {
-                handleLogout()
-            }.onFailure {
-                handleLogout()
-            }
+            networkDataSource.logoutTwo(twoLogoutRequest, twoConfig.authorization, twoConfig.baseUrl)
+                .onSuccess { handleLogout() }
+                .onFailure { handleLogout() }
         }
     }
 
-    /**
-     * This method is used to clear the session from the local storage and also set the session
-     * state to false.
-     */
     private fun handleLogout() {
         sessionManager.clearSession()
         _state.value = AuthState.LogoutSuccess
         setSessionState(false)
     }
 
-    /**
-     * This method call the api to refresh the two token. If the result is success then the token
-     * data is updated in the local storage as well and if it fail will return back without saving
-     * the token data.
-     */
     override fun refreshToken(): Boolean {
         val currentSession = sessionManager.getSession() ?: return false
 
         _state.value = AuthState.Loading
-        val TWORenewTokenRequest = TWORenewTokenRequest(
+        val twoRenewTokenRequest = TWORenewTokenRequest(
             currentFlatToken = currentSession.TWOTokenData.encodedJwt,
             deviceId = twoConfig.deviceId
         )
-        var newTokenData: TWORenewTokenData?
-        try {
+
+        val renewResult = try {
             runBlocking(Dispatchers.IO) {
-                newTokenData = RetrofitManager.getInstance(twoConfig.baseUrl)
-                    .create(TWOAuthService::class.java)
-                    .renewToken(twoConfig.authorization, TWORenewTokenRequest)?.body()
+                networkDataSource.renewTwoToken(twoRenewTokenRequest, twoConfig.authorization, twoConfig.baseUrl)
             }
         } catch (e: Exception) {
-            _state.value = AuthState.Error(e)
+            emitError(e)
             setSessionState(false)
             return false
         }
 
-        newTokenData?.let {
-            currentSession.TWOTokenData.copy(
-                encodedJwt = it.encodedJwt,
-                sessionToken = it.sessionToken,
-                sessionTokenExpiry = it.sessionTokenExpiry
-            )
-            sessionManager.saveSession(currentSession)
-            _state.value = AuthState.AuthSuccess(currentSession)
-            setSessionState(true)
-            return true
-        }
-        _state.value = AuthState.Error(Exception("Token Renew Failed"))
-        setSessionState(false)
-        return false
+        return renewResult.fold(
+            onSuccess = { newTokenData ->
+                val updatedSession = currentSession.copy(
+                    TWOTokenData = currentSession.TWOTokenData.copy(
+                        encodedJwt = newTokenData.encodedJwt,
+                        sessionToken = newTokenData.sessionToken,
+                        sessionTokenExpiry = newTokenData.sessionTokenExpiry
+                    )
+                )
+                sessionManager.saveSession(updatedSession)
+                _state.value = AuthState.AuthSuccess(updatedSession)
+                setSessionState(true)
+                true
+            },
+            onFailure = {
+                emitError(it)
+                setSessionState(false)
+                false
+            }
+        )
     }
 
-    /**
-     * This method is used to set the session state.
-     */
     private fun setSessionState(state: Boolean) {
         try {
             _sessionState.value = state
@@ -411,16 +325,13 @@ internal class ONEAuthDelegate(
         }
     }
 
-    /**
-     * Used for initial purchases, submit receipt and link account all in one API call
-     */
     override fun submitGoogleReceiptAndLinkAccount(
         purchaseToken: String,
         sku: String,
         username: String?,
         password: String?,
         packageName: String?,
-        accountToken: String?
+        accountToken: String?,
     ) {
         _state.value = AuthState.Loading
 
@@ -438,55 +349,21 @@ internal class ONEAuthDelegate(
         )
 
         coroutineScope.launch {
-            runCatching {
-                RetrofitManager.getInstance(twoConfig.baseUrl)
-                    .create(TWOAuthService::class.java)
-                    .submitGoogleReceiptAndLinkAccount(
-                        twoConfig.authorization, submitGoogleReceiptDataLinkAccount
-                    )
-            }.onSuccess { twoReceiptLoginResponse ->
-                val twoTokenData = twoReceiptLoginResponse?.body()?.takeIf {
-                    twoReceiptLoginResponse.isSuccessful
-                } ?: run {
-                    val errorBody = twoReceiptLoginResponse?.errorBody().toString()
-                    _state.value = AuthState.Error(Exception(errorBody))
-                    return@launch
-                }
-
-                if (twoTokenData.success == true) {
-                    val sessionData = SessionData(
-                        authorizationCode = twoConfig.authorization,
-                        ONETokenData = ONETokenData(),
-                        TWOTokenData = TWOTokenData(
-                            success = twoTokenData.success,
-                            status = twoTokenData.status,
-                            sessionToken = twoTokenData.sessionToken,
-                            sessionTokenExpiry = twoTokenData.sessionTokenExpiry,
-                            supportToken = twoTokenData.supportToken,
-                            encodedJwt = twoTokenData.encodedJwt,
-                            username = twoTokenData.username,
-                            processingTime = twoTokenData.processingTime
-                        )
-                    )
-                    sessionManager.saveSession(sessionData)
-                    _state.value = AuthState.AuthSuccess(sessionData)
-                } else {
-                    _state.value = AuthState.Error(Exception(twoTokenData.message))
-                }
-            }.onFailure {
-                _state.value = AuthState.Error(it)
-            }
+            handleReceiptResult(
+                networkDataSource.submitGoogleReceiptAndLinkAccount(
+                    submitGoogleReceiptDataLinkAccount,
+                    twoConfig.authorization,
+                    twoConfig.baseUrl
+                )
+            )
         }
     }
 
-    /**
-     * Submit Amazon IAP purchase receipt for two-Auth registration
-     */
     override fun submitGoogleReceipt(
         currentPurchaseToken: String?,
         previousPurchaseToken: String?,
         sku: String,
-        packageName: String?
+        packageName: String?,
     ) {
         _state.value = AuthState.Loading
 
@@ -502,53 +379,20 @@ internal class ONEAuthDelegate(
         )
 
         coroutineScope.launch {
-            runCatching {
-                RetrofitManager.getInstance(twoConfig.baseUrl)
-                    .create(TWOAuthService::class.java)
-                    .submitGoogleReceipt(twoConfig.authorization, submitGoogleData)
-            }.onSuccess { twoReceiptLoginResponse ->
-                val twoTokenData = twoReceiptLoginResponse?.body()?.takeIf {
-                    twoReceiptLoginResponse.isSuccessful
-                } ?: run {
-                    val errorBody = twoReceiptLoginResponse?.errorBody().toString()
-                    _state.value = AuthState.Error(Exception(errorBody))
-                    return@launch
-                }
-
-                if (twoTokenData.success == true) {
-                    val sessionData = SessionData(
-                        authorizationCode = twoConfig.authorization,
-                        ONETokenData = ONETokenData(),
-                        TWOTokenData = TWOTokenData(
-                            success = twoTokenData.success,
-                            status = twoTokenData.status,
-                            sessionToken = twoTokenData.sessionToken,
-                            sessionTokenExpiry = twoTokenData.sessionTokenExpiry,
-                            supportToken = twoTokenData.supportToken,
-                            encodedJwt = twoTokenData.encodedJwt,
-                            username = twoTokenData.username,
-                            processingTime = twoTokenData.processingTime
-                        )
-                    )
-                    sessionManager.saveSession(sessionData)
-                    _state.value = AuthState.AuthSuccess(sessionData)
-                } else {
-                    _state.value = AuthState.Error(Exception(twoTokenData.message))
-                }
-            }.onFailure {
-                _state.value = AuthState.Error(it)
-            }
+            handleReceiptResult(
+                networkDataSource.submitGoogleReceipt(
+                    submitGoogleData,
+                    twoConfig.authorization,
+                    twoConfig.baseUrl
+                )
+            )
         }
     }
 
-    /**
-     * Googleplay users who purchase an IAP will need to occasionally log into two-Auth.
-     * This will happen through the google receipt login.
-     */
     override fun loginWithGoogleReceipt(purchaseToken: String) {
         _state.value = AuthState.Loading
 
-        val TWOGoogleReceiptLoginRequest = TWOGoogleReceiptLoginRequest(
+        val twoGoogleReceiptLoginRequest = TWOGoogleReceiptLoginRequest(
             purchaseToken = purchaseToken,
             brand = twoConfig.brand,
             source = twoConfig.source,
@@ -558,43 +402,61 @@ internal class ONEAuthDelegate(
         )
 
         coroutineScope.launch {
-            runCatching {
-                RetrofitManager.getInstance(twoConfig.baseUrl)
-                    .create(TWOAuthService::class.java)
-                    .loginWithGoogleReceipt(twoConfig.authorization, TWOGoogleReceiptLoginRequest)
-            }.onSuccess { twoReceiptLoginResponse ->
-                val twoTokenData = twoReceiptLoginResponse?.body()?.takeIf {
-                    twoReceiptLoginResponse.isSuccessful
-                } ?: run {
-                    val errorBody = twoReceiptLoginResponse?.errorBody().toString()
-                    _state.value = AuthState.Error(Exception(errorBody))
-                    return@launch
-                }
-
-                if (twoTokenData.success == true) {
-                    val sessionData = SessionData(
-                        authorizationCode = twoConfig.authorization,
-                        ONETokenData = ONETokenData(),
-                        TWOTokenData = TWOTokenData(
-                            success = twoTokenData.success,
-                            status = twoTokenData.status,
-                            sessionToken = twoTokenData.sessionToken,
-                            sessionTokenExpiry = twoTokenData.sessionTokenExpiry,
-                            supportToken = twoTokenData.supportToken,
-                            encodedJwt = twoTokenData.encodedJwt,
-                            username = twoTokenData.username,
-                            processingTime = twoTokenData.processingTime
-                        )
-                    )
-                    sessionManager.saveSession(sessionData)
-                    _state.value = AuthState.AuthSuccess(sessionData)
-                } else {
-                    _state.value = AuthState.Error(Exception(twoTokenData.message))
-                }
-            }.onFailure {
-                _state.value = AuthState.Error(it)
-            }
+            handleReceiptResult(
+                networkDataSource.loginWithGoogleReceipt(
+                    twoGoogleReceiptLoginRequest,
+                    twoConfig.authorization,
+                    twoConfig.baseUrl
+                )
+            )
         }
+    }
+
+    private fun handleReceiptResult(receiptResult: Result<SubmitReceiptData>) {
+        receiptResult.onSuccess { twoTokenData ->
+            if (twoTokenData.success == true) {
+                persistSession(createSessionFromReceipt(twoTokenData))
+            } else {
+                emitError(Exception(twoTokenData.message))
+            }
+        }.onFailure {
+            emitError(it)
+        }
+    }
+
+    private fun persistSession(sessionData: SessionData) {
+        sessionManager.saveSession(sessionData)
+        _state.value = AuthState.AuthSuccess(sessionData)
+        setSessionState(true)
+    }
+
+    private fun createSession(twoTokenData: TWOTokenData, oneData: ONETokenData = ONETokenData()): SessionData {
+        return SessionData(
+            authorizationCode = twoConfig.authorization,
+            ONETokenData = oneData,
+            TWOTokenData = twoTokenData
+        )
+    }
+
+    private fun createSessionFromReceipt(receiptData: SubmitReceiptData): SessionData {
+        return SessionData(
+            authorizationCode = twoConfig.authorization,
+            ONETokenData = ONETokenData(),
+            TWOTokenData = TWOTokenData(
+                success = receiptData.success,
+                status = receiptData.status,
+                sessionToken = receiptData.sessionToken,
+                sessionTokenExpiry = receiptData.sessionTokenExpiry,
+                supportToken = receiptData.supportToken,
+                encodedJwt = receiptData.encodedJwt,
+                username = receiptData.username,
+                processingTime = receiptData.processingTime
+            )
+        )
+    }
+
+    private fun emitError(error: Throwable) {
+        _state.value = AuthState.Error(error)
     }
 
     private fun isSessionExpired(): Boolean {
@@ -604,56 +466,30 @@ internal class ONEAuthDelegate(
         return false
     }
 
-    private fun getTokenForPrivateKey() : String {
+    private suspend fun fetchPrivateKeyForRegistration(): Result<String> {
+        val tokenResult = networkDataSource.fetchPrivateKeyToken(
+            ONEGetTokenForPKRequest(
+                clientId = twoConfig.brand,
+                clientSecret = oneConfig.privateKeyAuthorization
+            ),
+            oneConfig.privateKeyBaseURL
+        )
 
-        var newTokenForPKData = ""
-        try {
-            runBlocking(Dispatchers.IO) {
-                val newTokenData = RetrofitManager.getInstance(oneConfig.privateKeyBaseURL)
-                    .create(ONEAuthService::class.java).getTokenForPrivateKey(
-                        ONEGetTokenForPKRequest(clientId = twoConfig.brand,
-                            clientSecret = oneConfig.privateKeyAuthorization))
-
-                try {
-                    if (newTokenData?.body()?.success == true) {
-                        println(newTokenData.body()?.accessToken)
-                        newTokenForPKData = newTokenData.body()?.accessToken.toString()
-                    } else
-                        println(newTokenData?.body()?.error)
-                } catch (e: Exception) {
-                    println(newTokenData?.body()?.error)
+        return tokenResult.fold(
+            onSuccess = { tokenData ->
+                if (tokenData.success == true && !tokenData.accessToken.isNullOrBlank()) {
+                    networkDataSource.fetchPrivateKey(
+                        authorization = "Bearer ${tokenData.accessToken}",
+                        clientId = twoConfig.brand,
+                        baseUrl = oneConfig.privateKeyBaseURL
+                    ).mapCatching { data ->
+                        data.privateKey ?: throw IllegalStateException(data.error ?: "Unable to fetch private key")
+                    }
+                } else {
+                    Result.failure(IllegalStateException(tokenData.error ?: "Unable to fetch token for private key"))
                 }
-            }
-        } catch (e: Exception) {
-            _state.value = AuthState.Error(e)
-        }
-
-        return newTokenForPKData
-    }
-
-    private fun getTokenForPrivateKey(token: String) : String {
-
-        var privateKey = ""
-        try {
-            runBlocking(Dispatchers.IO) {
-                val newPKData = RetrofitManager.getInstance(oneConfig.privateKeyBaseURL)
-                    .create(ONEAuthService::class.java).getPrivateKey("Bearer $token",
-                        clientId = twoConfig.brand)
-
-                try {
-                    if (newPKData?.body()?.success == true) {
-                        println(newPKData.body()?.privateKey)
-                        privateKey = newPKData.body()?.privateKey.toString()
-                    } else
-                        println(newPKData?.body()?.error)
-                } catch (e: Exception) {
-                    println(newPKData?.body()?.error)
-                }
-            }
-        } catch (e: Exception) {
-            _state.value = AuthState.Error(e)
-        }
-
-        return privateKey
+            },
+            onFailure = { Result.failure(it) }
+        )
     }
 }
