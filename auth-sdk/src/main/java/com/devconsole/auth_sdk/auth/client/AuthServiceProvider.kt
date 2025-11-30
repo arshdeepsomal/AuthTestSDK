@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.delegate
+package com.devconsole.auth_sdk.auth.client
 
 import android.content.Context
 import net.openid.appauth.AuthorizationService

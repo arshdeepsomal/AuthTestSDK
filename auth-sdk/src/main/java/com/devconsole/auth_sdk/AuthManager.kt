@@ -4,18 +4,20 @@ import android.content.Context
 import androidx.activity.result.ActivityResult
 import com.devconsole.auth_sdk.data.AuthState
 import com.devconsole.auth_sdk.data.Configuration
-import com.devconsole.auth_sdk.delegate.DefaultDelegateProvider
+import com.devconsole.auth_sdk.auth.delegate.AuthDelegateProvider
+import com.devconsole.auth_sdk.auth.delegate.DefaultDelegateProvider
 import com.devconsole.auth_sdk.session.SessionData
 import com.devconsole.auth_sdk.session.SessionManager
 import kotlinx.coroutines.flow.StateFlow
 
 class AuthManager(
-    val context: Context,
+    private val context: Context,
     ONEConfig: Configuration.ONE.Auth,
     TWOConfig: Configuration.TWO.Auth,
+    delegateProvider: AuthDelegateProvider = DefaultDelegateProvider,
 ) {
 
-    private val authApi: AuthApi by lazy { DefaultDelegateProvider.provide()(context, ONEConfig, TWOConfig) }
+    private val authApi: AuthApi by lazy { delegateProvider.provide()(context, ONEConfig, TWOConfig) }
 
     private val sessionManager = SessionManager(context)
 

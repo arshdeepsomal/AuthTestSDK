@@ -1,4 +1,4 @@
-package com.devconsole.auth_sdk.delegate
+package com.devconsole.auth_sdk.auth.delegate
 
 import android.content.Context
 import com.devconsole.auth_sdk.AuthApi
