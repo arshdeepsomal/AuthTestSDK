@@ -11,7 +11,7 @@ import com.devconsole.auth_sdk.session.SessionManager
 import kotlinx.coroutines.flow.StateFlow
 
 class AuthManager(
-    val context: Context,
+    private val context: Context,
     ONEConfig: Configuration.ONE.Auth,
     TWOConfig: Configuration.TWO.Auth,
     delegateProvider: AuthDelegateProvider = DefaultDelegateProvider,

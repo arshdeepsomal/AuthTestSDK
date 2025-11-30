@@ -5,7 +5,7 @@ import com.devconsole.auth_sdk.session.DefaultSessionDelegateProvider
 import com.devconsole.auth_sdk.session.SessionDelegateProvider
 
 internal class SessionManager(
-    val context: Context,
+    private val context: Context,
     sessionDelegateProvider: SessionDelegateProvider = DefaultSessionDelegateProvider,
 ) {
 

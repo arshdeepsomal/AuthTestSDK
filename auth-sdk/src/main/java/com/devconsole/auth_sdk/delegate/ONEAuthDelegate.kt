@@ -84,7 +84,7 @@ internal class ONEAuthDelegate(
     )
 
     override fun login() {
-        _state.value = AuthState.Loading
+        setLoadingState()
         val authRequest = AuthorizationRequest.Builder(
             authServiceConfig,
             oneConfig.clientId,
@@ -100,7 +100,7 @@ internal class ONEAuthDelegate(
     }
 
     override fun register() {
-        _state.value = AuthState.Loading
+        setLoadingState()
         coroutineScope.launch {
             fetchPrivateKeyForRegistration().onSuccess { privateKey ->
                 callRegister(privateKey)
@@ -189,7 +189,7 @@ internal class ONEAuthDelegate(
                     return
                 }
 
-                _state.value = AuthState.Loading
+                setLoadingState()
 
                 coroutineScope.launch {
                     fetchOneToken(resultData)
@@ -257,7 +257,7 @@ internal class ONEAuthDelegate(
     }
 
     override fun logout() {
-        _state.value = AuthState.Loading
+        setLoadingState()
         val currentSession = sessionManager.getSession()
         val twoLogoutRequest = TWOLogoutRequest(
             idToken = currentSession?.ONETokenData?.idToken,
@@ -279,7 +279,7 @@ internal class ONEAuthDelegate(
     override fun refreshToken(): Boolean {
         val currentSession = sessionManager.getSession() ?: return false
 
-        _state.value = AuthState.Loading
+        setLoadingState()
         val twoRenewTokenRequest = TWORenewTokenRequest(
             currentFlatToken = currentSession.TWOTokenData.encodedJwt,
             deviceId = twoConfig.deviceId
@@ -333,8 +333,6 @@ internal class ONEAuthDelegate(
         packageName: String?,
         accountToken: String?,
     ) {
-        _state.value = AuthState.Loading
-
         val submitGoogleReceiptDataLinkAccount = SubmitGoogleReceiptDataLinkAccount(
             purchaseToken = purchaseToken,
             brand = twoConfig.brand,
@@ -348,13 +346,11 @@ internal class ONEAuthDelegate(
             productId = sku
         )
 
-        coroutineScope.launch {
-            handleReceiptResult(
-                networkDataSource.submitGoogleReceiptAndLinkAccount(
-                    submitGoogleReceiptDataLinkAccount,
-                    twoConfig.authorization,
-                    twoConfig.baseUrl
-                )
+        launchReceiptRequest {
+            networkDataSource.submitGoogleReceiptAndLinkAccount(
+                submitGoogleReceiptDataLinkAccount,
+                twoConfig.authorization,
+                twoConfig.baseUrl
             )
         }
     }
@@ -365,8 +361,6 @@ internal class ONEAuthDelegate(
         sku: String,
         packageName: String?,
     ) {
-        _state.value = AuthState.Loading
-
         val submitGoogleData = SubmitGoogleData(
             currentPurchaseToken = currentPurchaseToken,
             previousPurchaseToken = previousPurchaseToken,
@@ -378,20 +372,16 @@ internal class ONEAuthDelegate(
             productId = sku
         )
 
-        coroutineScope.launch {
-            handleReceiptResult(
-                networkDataSource.submitGoogleReceipt(
-                    submitGoogleData,
-                    twoConfig.authorization,
-                    twoConfig.baseUrl
-                )
+        launchReceiptRequest {
+            networkDataSource.submitGoogleReceipt(
+                submitGoogleData,
+                twoConfig.authorization,
+                twoConfig.baseUrl
             )
         }
     }
 
     override fun loginWithGoogleReceipt(purchaseToken: String) {
-        _state.value = AuthState.Loading
-
         val twoGoogleReceiptLoginRequest = TWOGoogleReceiptLoginRequest(
             purchaseToken = purchaseToken,
             brand = twoConfig.brand,
@@ -401,13 +391,11 @@ internal class ONEAuthDelegate(
             respondWithUsername = true
         )
 
-        coroutineScope.launch {
-            handleReceiptResult(
-                networkDataSource.loginWithGoogleReceipt(
-                    twoGoogleReceiptLoginRequest,
-                    twoConfig.authorization,
-                    twoConfig.baseUrl
-                )
+        launchReceiptRequest {
+            networkDataSource.loginWithGoogleReceipt(
+                twoGoogleReceiptLoginRequest,
+                twoConfig.authorization,
+                twoConfig.baseUrl
             )
         }
     }
@@ -422,6 +410,17 @@ internal class ONEAuthDelegate(
         }.onFailure {
             emitError(it)
         }
+    }
+
+    private fun launchReceiptRequest(block: suspend () -> Result<SubmitReceiptData>) {
+        setLoadingState()
+        coroutineScope.launch {
+            handleReceiptResult(block())
+        }
+    }
+
+    private fun setLoadingState() {
+        _state.value = AuthState.Loading
     }
 
     private fun persistSession(sessionData: SessionData) {
