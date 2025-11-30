@@ -2,7 +2,7 @@ package com.devconsole.auth_sdk.network.data
 
 import com.google.gson.annotations.SerializedName
 
-data class TWOGetTokenForPKData(
+data class ONEGetTokenForPKData(
     @SerializedName("access_token")
     val accessToken: String?,
 

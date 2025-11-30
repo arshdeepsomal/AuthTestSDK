@@ -2,7 +2,7 @@ package com.devconsole.auth_sdk.network.data
 
 import com.google.gson.annotations.SerializedName
 
-data class TWOPrivateKeyData(
+data class ONEPrivateKeyData(
     @SerializedName("private_key")
     val privateKey: String?,
 

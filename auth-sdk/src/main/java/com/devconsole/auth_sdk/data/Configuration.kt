@@ -12,7 +12,9 @@ sealed class Configuration {
             val clientSecret: String,
             val redirectUri: String,
             val nounce: String,
-            val salt: String = ""
+            val salt: String = "",
+            val privateKeyBaseURL: String,
+            val privateKeyAuthorization: String
         ) : ONE()
     }
 

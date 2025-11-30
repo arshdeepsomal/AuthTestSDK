@@ -23,7 +23,9 @@ class MainViewModel(application: Application): AndroidViewModel(application) {
         clientSecret = "CLIENT_SECRET",
         redirectUri = "com.example.authtest/callback",
         nounce = UUID.randomUUID().toString(),
-        salt = "SALT"
+        salt = "SALT",
+        privateKeyBaseURL = "PRivate keu base url",
+        privateKeyAuthorization = "Private key authorization"
     )
 
     @SuppressLint("HardwareIds")

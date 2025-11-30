@@ -30,7 +30,7 @@ import com.devconsole.auth_sdk.network.api.RetrofitManager
 import com.devconsole.auth_sdk.network.data.Claims
 import com.devconsole.auth_sdk.network.data.ClaimsRequest
 import com.devconsole.auth_sdk.network.data.ClaimsUserInfo
-import com.devconsole.auth_sdk.network.data.TWOGetTokenForPKRequest
+import com.devconsole.auth_sdk.network.data.ONEGetTokenForPKRequest
 import com.devconsole.auth_sdk.network.data.TWOGoogleReceiptLoginRequest
 import com.devconsole.auth_sdk.network.data.TWOLoginRequest
 import com.devconsole.auth_sdk.network.data.TWOLogoutRequest
@@ -609,10 +609,10 @@ internal class ONEAuthDelegate(
         var newTokenForPKData = ""
         try {
             runBlocking(Dispatchers.IO) {
-                val newTokenData = RetrofitManager.getInstance(twoConfig.baseUrl)
-                    .create(TWOAuthService::class.java).getTokenForPrivateKey(
-                        TWOGetTokenForPKRequest(clientId = twoConfig.brand,
-                            clientSecret = oneConfig.clientSecret))
+                val newTokenData = RetrofitManager.getInstance(oneConfig.privateKeyBaseURL)
+                    .create(ONEAuthService::class.java).getTokenForPrivateKey(
+                        ONEGetTokenForPKRequest(clientId = twoConfig.brand,
+                            clientSecret = oneConfig.privateKeyAuthorization))
 
                 try {
                     if (newTokenData?.body()?.success == true) {
@@ -636,8 +636,8 @@ internal class ONEAuthDelegate(
         var privateKey = ""
         try {
             runBlocking(Dispatchers.IO) {
-                val newPKData = RetrofitManager.getInstance(twoConfig.baseUrl)
-                    .create(TWOAuthService::class.java).getPrivateKey("Bearer $token",
+                val newPKData = RetrofitManager.getInstance(oneConfig.privateKeyBaseURL)
+                    .create(ONEAuthService::class.java).getPrivateKey("Bearer $token",
                         clientId = twoConfig.brand)
 
                 try {
