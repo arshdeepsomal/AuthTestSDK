@@ -12,6 +12,8 @@ import com.devconsole.auth_sdk.data.Configuration
 import com.devconsole.auth_sdk.session.SessionData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -53,15 +55,13 @@ class MainViewModel(application: Application): AndroidViewModel(application) {
     val sessionActive = _sessionActive.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            authManager.fetchAuthState().collect { authState ->
-                _authState.value = authState
-            }
+        authManager.fetchAuthState()
+            .onEach { state -> _authState.value = state }
+            .launchIn(viewModelScope)
 
-            authManager.fetchSessionState().collect { isSessionActive ->
-                _sessionActive.value = isSessionActive
-            }
-        }
+        authManager.fetchSessionState()
+            .onEach { isActive -> _sessionActive.value = isActive }
+            .launchIn(viewModelScope)
     }
 
     fun login() {
@@ -81,10 +81,17 @@ class MainViewModel(application: Application): AndroidViewModel(application) {
     }
 
     fun refreshSession() {
-        authManager.refreshSession()
+        viewModelScope.launch {
+            authManager.refreshSession()
+        }
     }
 
     fun getCurrentSession(): SessionData? {
         return authManager.getCurrentSession()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        authManager.clear()
     }
 }

@@ -6,7 +6,6 @@ import com.devconsole.auth_sdk.data.AuthState
 import com.devconsole.auth_sdk.data.Configuration
 import com.devconsole.auth_sdk.delegate.DefaultDelegateProvider
 import com.devconsole.auth_sdk.session.SessionData
-import com.devconsole.auth_sdk.session.SessionManager
 import kotlinx.coroutines.flow.StateFlow
 
 class AuthManager(
@@ -16,8 +15,6 @@ class AuthManager(
 ) {
 
     private val authApi: AuthApi by lazy { DefaultDelegateProvider.provide()(context, ONEConfig, TWOConfig) }
-
-    private val sessionManager = SessionManager(context)
 
     fun fetchAuthState(): StateFlow<AuthState> {
         return authApi.state
@@ -39,9 +36,7 @@ class AuthManager(
         authApi.handleIntentResult(result)
     }
 
-    fun getCurrentSession(): SessionData? {
-        return sessionManager.getSession()
-    }
+    fun getCurrentSession(): SessionData? = authApi.currentSession()
 
     fun fetchSessionState(): StateFlow<Boolean> {
         return authApi.sessionState
@@ -77,5 +72,13 @@ class AuthManager(
 
     fun refreshSession(): Boolean {
         return authApi.refreshToken()
+    }
+
+    fun clear() {
+        authApi.clear()
+    }
+
+    fun loginAnonymous() {
+        authApi.loginAnonymous()
     }
 }
