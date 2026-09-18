@@ -188,5 +188,9 @@ internal class DefaultAuthController(
         browserAuthFlow.clear()
         scope.cancel()
     }
+
+    override fun loginAnonymous() {
+        // added in auth controllers
+    }
 }
 
