@@ -2,6 +2,7 @@ package com.devconsole.auth_sdk
 
 import androidx.activity.result.ActivityResult
 import com.devconsole.auth_sdk.data.AuthState
+import com.devconsole.auth_sdk.session.SessionData
 import kotlinx.coroutines.flow.StateFlow
 
 internal interface AuthApi {
@@ -28,4 +29,8 @@ internal interface AuthApi {
 
     val state: StateFlow<AuthState>
     val sessionState: StateFlow<Boolean>
+    fun currentSession(): SessionData?
+    fun clear()
+
+    fun loginAnonymous()
 }
