@@ -14,4 +14,5 @@ internal object Constants {
     internal const val REGISTER_STATE = "register"
     internal const val PROMPT = "create"
     internal const val MAX_AGE = 86400
+    internal const val MAX_AGE_2 = 864000
 }

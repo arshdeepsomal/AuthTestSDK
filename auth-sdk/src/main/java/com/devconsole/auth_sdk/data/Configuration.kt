@@ -1,8 +1,6 @@
 package com.devconsole.auth_sdk.data
 
-/**
- * This sealed class is for the configuration of one and two auth.
- * Sending all the parameters */
+
 sealed class Configuration {
 
     sealed class ONE : Configuration() {
