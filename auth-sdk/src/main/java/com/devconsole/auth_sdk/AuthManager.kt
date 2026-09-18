@@ -77,4 +77,8 @@ class AuthManager(
     fun clear() {
         authApi.clear()
     }
+
+    fun loginAnonymous() {
+        authApi.loginAnonymous()
+    }
 }
