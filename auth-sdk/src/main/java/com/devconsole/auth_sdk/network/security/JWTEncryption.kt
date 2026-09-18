@@ -91,10 +91,4 @@ internal class JWTEncryption {
 
         return jwt
     }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun decodeJWT(jwt: String): String {
-        val jwtBody = jwt.split(".")[1]
-        return String(Base64.getDecoder().decode(jwtBody))
-    }
 }

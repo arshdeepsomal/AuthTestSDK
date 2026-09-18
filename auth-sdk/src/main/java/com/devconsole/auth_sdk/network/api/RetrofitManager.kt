@@ -7,6 +7,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 internal object RetrofitManager {
 
+    /**
+     * add retrofit manager
+     */
     fun getInstance(baseUrl: String): Retrofit {
         val logging = HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
         val httpClient = OkHttpClient.Builder().addInterceptor(logging).build()
